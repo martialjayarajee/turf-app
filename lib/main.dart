@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'services/hive_service.dart';
-import 'screens/cricket_scorer_screen.dart';
+import 'Screens/cricket_scorer_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // Initialize Hive through service
   await HiveService.init();
+  final box = HiveService.getBatsmanBox();
+print('Stored batsmen count: ${box.length}');
+for (var i = 0; i < box.length; i++) {
+  print('Batsman ${i + 1}: ${box.getAt(i)?.name}');
+}
   
   runApp(const CricketScorerApp());
 }

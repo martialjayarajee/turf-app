@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import '../models/bowler_model.dart';
+import '../Models/bowler_model.dart';
 
 class BowlerStatsWidget extends StatelessWidget {
   final Box<BowlerModel> bowlerBox;

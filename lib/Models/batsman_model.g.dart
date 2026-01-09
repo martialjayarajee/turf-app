@@ -23,13 +23,15 @@ class BatsmanModelAdapter extends TypeAdapter<BatsmanModel> {
       fours: fields[3] as int,
       sixes: fields[4] as int,
       strikeRate: fields[5] as double,
+      id: fields[6] as int,
+      b_id: fields[7] as String,
     );
   }
 
   @override
   void write(BinaryWriter writer, BatsmanModel obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -41,7 +43,11 @@ class BatsmanModelAdapter extends TypeAdapter<BatsmanModel> {
       ..writeByte(4)
       ..write(obj.sixes)
       ..writeByte(5)
-      ..write(obj.strikeRate);
+      ..write(obj.strikeRate)
+      ..writeByte(6)
+      ..write(obj.id)
+      ..writeByte(7)
+      ..write(obj.b_id);
   }
 
   @override

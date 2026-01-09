@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import '../models/batsman_model.dart';
-import '../models/bowler_model.dart';
+import '../Models/batsman_model.dart';
+import '../Models/bowler_model.dart';
+import '../Models/score_model.dart';
 import '../services/hive_service.dart';
 import '../widgets/score_card_widget.dart';
 import '../widgets/batsman_stats_widget.dart';
@@ -19,198 +20,343 @@ class CricketScorerScreen extends StatefulWidget {
 class _CricketScorerScreenState extends State<CricketScorerScreen> {
   late Box<BatsmanModel> batsmanBox;
   late Box<BowlerModel> bowlerBox;
-  
-  // Match state
-  int totalRuns = 0;
-  int wickets = 0;
-  double overs = 0.0;
-  double crr = 0.0;
-  double nrr = 7.09;
-
-  // Current bowling bowler index
-  int currentBowlerIndex = 0;
-
-  List<String> currentOver = ['', '', '', '', '', ''];
-  int strikeBatsmanIndex = 0;
-  int currentBall = 0;
+  late Box<ScoreModel> scoreBox;
+  late ScoreModel scoreModel;
+  bool isInitializing = true;
 
   @override
   void initState() {
     super.initState();
     batsmanBox = HiveService.getBatsmanBox();
     bowlerBox = HiveService.getBowlerBox();
+    scoreBox = HiveService.getScoreBox();
+    scoreModel = HiveService.getOrCreateScore();
+    _initializePlayersIfNeeded();
   }
 
-  // Get the current bowler
+ Future<void> _initializePlayersIfNeeded() async {
+  if (batsmanBox.isEmpty) {
+    await batsmanBox.add(BatsmanModel.create(
+      name: 'Hari',
+      batsmanBox: batsmanBox,
+    ));
+    await batsmanBox.add(BatsmanModel.create(
+      name: 'Berry',
+      batsmanBox: batsmanBox,
+    ));
+    await batsmanBox.add(BatsmanModel.create(
+      name: 'Gautham',
+      batsmanBox: batsmanBox,
+    ));
+    await batsmanBox.add(BatsmanModel.create(
+      name: 'Martial',
+      batsmanBox: batsmanBox,
+    ));
+  }
+
+  if (bowlerBox.isEmpty) {
+    await bowlerBox.add(BowlerModel(
+      name: 'Starc',
+    ));
+    await bowlerBox.add(BowlerModel(
+      name: 'Wood',
+    ));
+  }
+
+  // IMPORTANT: Initialize scoreModel with correct indices
+  // Striker = 0, Non-Striker = 1, Next = 2
+  if (scoreModel.strikeBatsmanIndex == scoreModel.nonStrikeBatsmanIndex) {
+    scoreModel.strikeBatsmanIndex = 0;
+    scoreModel.nonStrikeBatsmanIndex = 1;
+    scoreModel.nextBatsmanIndex = 2;
+    scoreModel.updateScore(
+      strikeBatsmanIndex: 0,
+      nonStrikeBatsmanIndex: 1,
+      nextBatsmanIndex: 2,
+    );
+  }
+
+  setState(() {
+    isInitializing = false;
+  });
+}
+
   BowlerModel? get currentBowler {
     if (bowlerBox.isEmpty) return null;
-    return bowlerBox.getAt(currentBowlerIndex);
+    return bowlerBox.getAt(scoreModel.currentBowlerIndex);
   }
 
   void addRuns(int runs) {
     setState(() {
-      totalRuns += runs;
-
-      // Update batsman stats
-      var batsman = batsmanBox.getAt(strikeBatsmanIndex);
+      var batsman = batsmanBox.getAt(scoreModel.strikeBatsmanIndex);
       if (batsman != null) {
         batsman.updateStats(runs);
       }
 
-      // Update current bowler stats
       if (currentBowler != null) {
         currentBowler!.updateStats(runs, false);
       }
 
-      // Update current over display BEFORE updating ball count
-      int overIndex = currentBall % 6;
-      currentOver[overIndex] = runs.toString();
+      int overIndex = scoreModel.currentBall % 6;
+      scoreModel.currentOver[overIndex] = runs.toString();
 
-      // Update over tracking
       _updateOverTracking();
+      scoreModel.totalRuns += runs;
 
-      // Calculate CRR
-      crr = overs > 0 ? (totalRuns / overs) : 0.0;
+      double crr = scoreModel.overs > 0 ? (scoreModel.totalRuns / scoreModel.overs) : 0.0;
 
-      // Check if over is completed (6 balls)
-      if (currentBall % 6 == 0) {
-        // Over completed
+      if (scoreModel.currentBall % 6 == 0) {
         if (runs % 2 == 0) {
-          // Even runs - swap strike for next over
           _switchStrike();
         }
         
         _changeBowler();
         _resetCurrentOver();
       } else if (runs % 2 == 1) {
-        // Odd runs mid-over - swap strike
         _switchStrike();
       }
+
+      scoreModel.updateScore(
+        totalRuns: scoreModel.totalRuns,
+        currentBall: scoreModel.currentBall,
+        overs: scoreModel.overs,
+        crr: crr,
+        strikeBatsmanIndex: scoreModel.strikeBatsmanIndex,
+        nonStrikeBatsmanIndex: scoreModel.nonStrikeBatsmanIndex,
+        currentBowlerIndex: scoreModel.currentBowlerIndex,
+        currentOver: scoreModel.currentOver,
+      );
     });
   }
 
   void addWicket() {
-    setState(() {
-      wickets++;
+  setState(() {
+    // Mark the current striker as out
+    var outBatsman = batsmanBox.getAt(scoreModel.strikeBatsmanIndex);
+    if (outBatsman != null) {
+      outBatsman.markAsOut();
+    }
+
+    scoreModel.wickets++;
+    
+    if (currentBowler != null) {
+      currentBowler!.updateStats(0, true);
+    }
+
+    int overIndex = scoreModel.currentBall % 6;
+    scoreModel.currentOver[overIndex] = 'W';
+
+    _updateOverTracking();
+
+    // Find the next available batsman who is NOT out and NOT currently batting
+    int newBatsmanIndex = -1;
+    
+    for (int i = 0; i < batsmanBox.length; i++) {
+      var batsman = batsmanBox.getAt(i);
+      if (batsman != null && 
+          !batsman.isOut && 
+          i != scoreModel.strikeBatsmanIndex && 
+          i != scoreModel.nonStrikeBatsmanIndex) {
+        newBatsmanIndex = i;
+        break;
+      }
+    }
+
+    if (newBatsmanIndex != -1) {
+      // Replace the OUT striker with the new batsman
+      // The non-striker remains the same
+      scoreModel.strikeBatsmanIndex = newBatsmanIndex;
       
-      if (currentBowler != null) {
-        currentBowler!.updateStats(0, true);
-      }
+      // Update nextBatsmanIndex to the next available player after this one
+      scoreModel.nextBatsmanIndex = newBatsmanIndex + 1;
+      
+      print('Wicket! New batsman at index $newBatsmanIndex');
+      print('Striker: ${batsmanBox.getAt(scoreModel.strikeBatsmanIndex)?.name}');
+      print('Non-Striker: ${batsmanBox.getAt(scoreModel.nonStrikeBatsmanIndex)?.name}');
+    } else {
+      // All out - no more batsmen
+      print('All Out! No more batsmen available');
+      _showAllOutDialog();
+    }
 
-      int overIndex = currentBall % 6;
-      currentOver[overIndex] = 'W';
+    // Handle end of over
+    if (scoreModel.currentBall % 6 == 0) {
+      _changeBowler();
+      _resetCurrentOver();
+      // After over completion, swap strike between remaining batsmen
+      _switchStrike();
+    }
 
-      // Update over tracking
-      _updateOverTracking();
+    scoreModel.updateScore(
+      wickets: scoreModel.wickets,
+      currentBall: scoreModel.currentBall,
+      overs: scoreModel.overs,
+      strikeBatsmanIndex: scoreModel.strikeBatsmanIndex,
+      nonStrikeBatsmanIndex: scoreModel.nonStrikeBatsmanIndex,
+      nextBatsmanIndex: scoreModel.nextBatsmanIndex,
+      currentBowlerIndex: scoreModel.currentBowlerIndex,
+      currentOver: scoreModel.currentOver,
+    );
+  });
+}
 
-      // Check if over is completed after wicket
-      if (currentBall % 6 == 0) {
-        _changeBowler();
-        _resetCurrentOver();
-      }
-    });
+  void _showAllOutDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('All Out!'),
+        content: Text('Team is all out for ${scoreModel.totalRuns} runs in ${scoreModel.overs} overs'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   void addExtras() {
     setState(() {
-      totalRuns += 1;
+      scoreModel.totalRuns += 1;
       
-      // Extras don't count as a ball, so don't update over tracking
-      // Just recalculate CRR
-      crr = overs > 0 ? (totalRuns / overs) : 0.0;
+      double crr = scoreModel.overs > 0 ? (scoreModel.totalRuns / scoreModel.overs) : 0.0;
+      
+      scoreModel.updateScore(
+        totalRuns: scoreModel.totalRuns,
+        crr: crr,
+      );
     });
   }
 
   void swapPlayers() {
     setState(() {
       _switchStrike();
+      scoreModel.updateScore(
+        strikeBatsmanIndex: scoreModel.strikeBatsmanIndex,
+        nonStrikeBatsmanIndex: scoreModel.nonStrikeBatsmanIndex,
+      );
     });
   }
 
   void undoLastBall() {
-    setState(() {
-      if (currentBall > 0) {
-        bool wasFirstBallOfOver = currentBall % 6 == 0;
-        
-        int overIndex = (currentBall - 1) % 6;
-        String lastBallValue = currentOver[overIndex];
-        
-        // Undo bowler stats
-        if (currentBowler != null) {
-          if (lastBallValue == 'W') {
-            currentBowler!.undoBall(0, true);
-            wickets--;
-          } else if (lastBallValue.isNotEmpty && int.tryParse(lastBallValue) != null) {
-            int lastRuns = int.parse(lastBallValue);
-            currentBowler!.undoBall(lastRuns, false);
-            totalRuns -= lastRuns;
-          }
-        }
-        
-        currentBall--;
-        
-        // Recalculate overs based on current ball count
-        int completedOvers = currentBall ~/ 6;
-        int ballsInCurrentOver = currentBall % 6;
-        overs = completedOvers + (ballsInCurrentOver / 10.0);
-        
-        overIndex = currentBall % 6;
-        currentOver[overIndex] = '';
-
-        if (wasFirstBallOfOver) {
-          if (lastBallValue.isNotEmpty && 
-              lastBallValue != 'W' && 
-              int.tryParse(lastBallValue) != null) {
-            int lastRuns = int.parse(lastBallValue);
-            if (lastRuns % 2 == 0) {
-              _switchStrike();
+  setState(() {
+    if (scoreModel.currentBall > 0) {
+      bool wasFirstBallOfOver = scoreModel.currentBall % 6 == 0;
+      
+      int overIndex = (scoreModel.currentBall - 1) % 6;
+      String lastBallValue = scoreModel.currentOver[overIndex];
+      
+      if (currentBowler != null) {
+        if (lastBallValue == 'W') {
+          currentBowler!.undoBall(0, true);
+          scoreModel.wickets--;
+          
+          // Find the most recently added batsman and restore the previous striker
+          if (scoreModel.nextBatsmanIndex > 2) {
+            int restoredBatsmanIndex = scoreModel.nextBatsmanIndex - 1;
+            
+            // The current striker is the one who just came in - remove them from batting
+            // Find the batsman who was out and restore them as striker
+            for (int i = batsmanBox.length - 1; i >= 0; i--) {
+              var batsman = batsmanBox.getAt(i);
+              if (batsman != null && batsman.isOut) {
+                batsman.markAsNotOut();
+                scoreModel.strikeBatsmanIndex = i;
+                scoreModel.nextBatsmanIndex = restoredBatsmanIndex;
+                print('Undo wicket: Restored ${batsman.name} as striker');
+                break;
+              }
             }
           }
-          _changeBowlerBack();
-        } else if (lastBallValue.isNotEmpty && 
-                   lastBallValue != 'W' && 
-                   int.tryParse(lastBallValue) != null) {
+        } else if (lastBallValue.isNotEmpty && int.tryParse(lastBallValue) != null) {
           int lastRuns = int.parse(lastBallValue);
-          if (lastRuns % 2 == 1) {
+          currentBowler!.undoBall(lastRuns, false);
+          scoreModel.totalRuns -= lastRuns;
+          
+          // Undo batsman stats
+          var batsman = batsmanBox.getAt(scoreModel.strikeBatsmanIndex);
+          if (batsman != null) {
+            batsman.undoStats(lastRuns);
+          }
+        }
+      }
+      
+      scoreModel.currentBall--;
+      
+      int completedOvers = scoreModel.currentBall ~/ 6;
+      int ballsInCurrentOver = scoreModel.currentBall % 6;
+      scoreModel.overs = completedOvers + (ballsInCurrentOver / 10.0);
+      
+      overIndex = scoreModel.currentBall % 6;
+      scoreModel.currentOver[overIndex] = '';
+
+      if (wasFirstBallOfOver) {
+        if (lastBallValue.isNotEmpty && 
+            lastBallValue != 'W' && 
+            int.tryParse(lastBallValue) != null) {
+          int lastRuns = int.parse(lastBallValue);
+          if (lastRuns % 2 == 0) {
             _switchStrike();
           }
         }
-        
-        // Recalculate CRR
-        crr = overs > 0 ? (totalRuns / overs) : 0.0;
+        _changeBowlerBack();
+      } else if (lastBallValue.isNotEmpty && 
+                 lastBallValue != 'W' && 
+                 int.tryParse(lastBallValue) != null) {
+        int lastRuns = int.parse(lastBallValue);
+        if (lastRuns % 2 == 1) {
+          _switchStrike();
+        }
       }
-    });
-  }
+      
+      double crr = scoreModel.overs > 0 ? (scoreModel.totalRuns / scoreModel.overs) : 0.0;
+      
+      scoreModel.updateScore(
+        totalRuns: scoreModel.totalRuns,
+        wickets: scoreModel.wickets,
+        currentBall: scoreModel.currentBall,
+        overs: scoreModel.overs,
+        crr: crr,
+        strikeBatsmanIndex: scoreModel.strikeBatsmanIndex,
+        nonStrikeBatsmanIndex: scoreModel.nonStrikeBatsmanIndex,
+        nextBatsmanIndex: scoreModel.nextBatsmanIndex,
+        currentBowlerIndex: scoreModel.currentBowlerIndex,
+        currentOver: scoreModel.currentOver,
+      );
+    }
+  });
+}
 
   void _updateOverTracking() {
-    currentBall++;
-    int completedOvers = currentBall ~/ 6;
-    int ballsInCurrentOver = currentBall % 6;
-    overs = completedOvers + (ballsInCurrentOver / 10.0);
+    scoreModel.currentBall++;
+    int completedOvers = scoreModel.currentBall ~/ 6;
+    int ballsInCurrentOver = scoreModel.currentBall % 6;
+    scoreModel.overs = completedOvers + (ballsInCurrentOver / 10.0);
   }
 
   void _switchStrike() {
-    strikeBatsmanIndex = strikeBatsmanIndex == 0 ? 1 : 0;
+    int temp = scoreModel.strikeBatsmanIndex;
+    scoreModel.strikeBatsmanIndex = scoreModel.nonStrikeBatsmanIndex;
+    scoreModel.nonStrikeBatsmanIndex = temp;
   }
 
   void _changeBowler() {
-    // Rotate to next bowler
     if (bowlerBox.isNotEmpty) {
-      currentBowlerIndex = (currentBowlerIndex + 1) % bowlerBox.length;
+      scoreModel.currentBowlerIndex = (scoreModel.currentBowlerIndex + 1) % bowlerBox.length;
       print('Bowler changed to: ${currentBowler?.name}');
     }
   }
 
   void _changeBowlerBack() {
-    // Go back to previous bowler (for undo functionality)
     if (bowlerBox.isNotEmpty) {
-      currentBowlerIndex = (currentBowlerIndex - 1 + bowlerBox.length) % bowlerBox.length;
+      scoreModel.currentBowlerIndex = (scoreModel.currentBowlerIndex - 1 + bowlerBox.length) % bowlerBox.length;
       print('Bowler changed back to: ${currentBowler?.name}');
     }
   }
 
   void _resetCurrentOver() {
-    currentOver = ['', '', '', '', '', ''];
+    scoreModel.currentOver = ['', '', '', '', '', ''];
   }
 
   @override
@@ -219,75 +365,91 @@ class _CricketScorerScreenState extends State<CricketScorerScreen> {
       backgroundColor: const Color(0xFF1a1a2e),
       appBar: _buildAppBar(),
       body: ValueListenableBuilder(
-        valueListenable: Hive.box<BatsmanModel>(HiveService.batsmanBoxName).listenable(),
-        builder: (context, Box<BatsmanModel> batsmanBox, _) {
+        valueListenable: scoreBox.listenable(),
+        builder: (context, Box<ScoreModel> box, _) {
+          final score = box.isNotEmpty ? box.getAt(0)! : scoreModel;
+          
           return ValueListenableBuilder(
-            valueListenable: Hive.box<BowlerModel>(HiveService.bowlerBoxName).listenable(),
-            builder: (context, Box<BowlerModel> bowlerBox, _) {
-              if (batsmanBox.isEmpty || bowlerBox.isEmpty) {
-                return const Center(
-                  child: Text(
-                    'No players found',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                );
-              }
+            valueListenable: batsmanBox.listenable(),
+            builder: (context, Box<BatsmanModel> bBox, _) {
+              return ValueListenableBuilder(
+                valueListenable: bowlerBox.listenable(),
+                builder: (context, Box<BowlerModel> bowBox, _) {
+                  if (isInitializing) {
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF1a8b8b),
+                      ),
+                    );
+                  }
 
-              return SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      const Text(
-                        'Score Board',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
+                  if (bBox.isEmpty || bowBox.isEmpty) {
+                    return const Center(
+                      child: Text(
+                        'No players found',
+                        style: TextStyle(color: Colors.white),
                       ),
-                      const SizedBox(height: 16),
-                      
-                      ScoreCardWidget(
-                        totalRuns: totalRuns,
-                        wickets: wickets,
-                        overs: overs,
-                        crr: crr,
-                        nrr: nrr,
+                    );
+                  }
+
+                  return SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        children: [
+                          const Text(
+                            'Score Board',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          
+                          ScoreCardWidget(
+                            totalRuns: score.totalRuns,
+                            wickets: score.wickets,
+                            overs: score.overs,
+                            crr: score.crr,
+                            nrr: score.nrr,
+                          ),
+                          
+                          const SizedBox(height: 16),
+                          
+                          BatsmanStatsWidget(
+                            batsmanBox: bBox,
+                            strikeBatsmanIndex: score.strikeBatsmanIndex,
+                            nonStrikeBatsmanIndex: score.nonStrikeBatsmanIndex,
+                          ),
+                          
+                          const SizedBox(height: 16),
+                          
+                          BowlerStatsWidget(
+                            bowlerBox: bowBox,
+                            currentBowlerIndex: score.currentBowlerIndex,
+                          ),
+                          
+                          const SizedBox(height: 16),
+                          
+                          CurrentOverWidget(currentOver: score.currentOver),
+                          
+                          const SizedBox(height: 24),
+                          
+                          _buildRunButtons(),
+                          
+                          const SizedBox(height: 16),
+                          
+                          _buildWicketButton(),
+                          
+                          const SizedBox(height: 16),
+                          
+                          _buildActionButtons(),
+                        ],
                       ),
-                      
-                      const SizedBox(height: 16),
-                      
-                      BatsmanStatsWidget(
-                        batsmanBox: batsmanBox,
-                        strikeBatsmanIndex: strikeBatsmanIndex,
-                      ),
-                      
-                      const SizedBox(height: 16),
-                      
-                      BowlerStatsWidget(
-                        bowlerBox: bowlerBox,
-                        currentBowlerIndex: currentBowlerIndex,
-                      ),
-                      
-                      const SizedBox(height: 16),
-                      
-                      CurrentOverWidget(currentOver: currentOver),
-                      
-                      const SizedBox(height: 24),
-                      
-                      _buildRunButtons(),
-                      
-                      const SizedBox(height: 16),
-                      
-                      _buildWicketButton(),
-                      
-                      const SizedBox(height: 16),
-                      
-                      _buildActionButtons(),
-                    ],
-                  ),
-                ),
+                    ),
+                  );
+                },
               );
             },
           );
