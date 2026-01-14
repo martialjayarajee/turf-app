@@ -1,0 +1,53 @@
+# Dart/Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+*.iml
+*.lock
+
+# Build files
+build/
+.gradle/
+android/.gradle/
+android/local.properties
+
+# iOS
+ios/Pods/
+ios/Flutter/Flutter.podspec
+
+# Web
+web/packages/
+
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.buildlog/
+.history
+.svn/
+.idea/
+migrate_working_dir/
+
+# VS Code
+.vscode/
+
+# IDE
+.idea/
+*.iml
+
+# Generated files
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+
+# ObjectBox
+lib/objectbox-model.json.bak
+
+# Platform-specific
+android/app/release/
+ios/Flutter/Flutter.podspec
