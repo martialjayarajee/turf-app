@@ -117,168 +117,173 @@ class _NewTeamsPageState extends State<NewTeamsPage> {
     );
   }
 
-  Future<void> _createNewTeam() async {
-    final teamName = await _showTeamNameDialog();
-    
-    if (teamName == null || teamName.trim().isEmpty) {
-      return;
-    }
-
-    final trimmedName = teamName.trim();
-
-    // Validate team name
-    if (trimmedName.length < 2) {
-      _showSnackBar('Team name must be at least 2 characters', Colors.orange);
-      return;
-    }
-
-    if (trimmedName.length > 30) {
-      _showSnackBar('Team name must be less than 30 characters', Colors.orange);
-      return;
-    }
-
-    // Check if team already exists
-    final existingTeam = Team.getByName(trimmedName);
-    if (existingTeam != null) {
-      _showSnackBar('Team "$trimmedName" already exists!', Colors.orange);
-      return;
-    }
-
-    // Create team in ObjectBox
-    try {
-      final team = Team.create(trimmedName);
-      setState(() {
-        teams.add(team);
-      });
-      _showSnackBar('Team "$trimmedName" created successfully!', Colors.green);
-    } catch (e) {
-      _showSnackBar('Error creating team: $e', Colors.red);
-    }
+ Future<void> _createNewTeam() async {
+  final teamName = await _showTeamNameDialog();
+  
+  if (teamName == null || teamName.trim().isEmpty) {
+    return;
   }
 
-  Future<String?> _showTeamNameDialog() async {
-    final controller = TextEditingController();
-    
-    return showDialog<String>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext dialogContext) {
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1C2026),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Create Team',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontFamily: 'Poppins',
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                TextField(
-                  controller: controller,
-                  autofocus: true,
-                  maxLength: 30,
-                  style: const TextStyle(
-                    color: Colors.black,
-                    fontFamily: 'Poppins',
-                  ),
-                  decoration: InputDecoration(
-                    hintText: 'Enter Team Name',
-                    hintStyle: const TextStyle(
-                      color: Color(0xFF9E9E9E),
-                      fontFamily: 'Poppins',
-                    ),
-                    filled: true,
-                    fillColor: const Color(0xFFD9D9D9),
-                    counterText: '',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: Color(0xFFD1D1D1)),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: Color(0xFFD1D1D1)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(
-                        color: Color(0xFF00C4FF),
-                        width: 2,
-                      ),
-                    ),
-                    contentPadding: const EdgeInsets.all(16),
-                  ),
-                  onSubmitted: (_) {
-                    Navigator.of(dialogContext).pop(controller.text);
-                  },
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextButton(
-                        onPressed: () => Navigator.of(dialogContext).pop(null),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: const Text(
-                          'Cancel',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontFamily: 'Poppins',
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(dialogContext).pop(controller.text);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF00C4FF),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        child: const Text(
-                          'Create',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontFamily: 'Poppins',
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+  final trimmedName = teamName.trim();
+  
+  // Capitalize first letter
+  final capitalizedName = trimmedName.isEmpty 
+      ? trimmedName 
+      : trimmedName[0].toUpperCase() + trimmedName.substring(1);
+
+  // Validate team name
+  if (capitalizedName.length < 2) {
+    _showSnackBar('Team name must be at least 2 characters', Colors.orange);
+    return;
+  }
+
+  if (capitalizedName.length > 30) {
+    _showSnackBar('Team name must be less than 30 characters', Colors.orange);
+    return;
+  }
+
+  // Check if team already exists
+  final existingTeam = Team.getByName(capitalizedName);
+  if (existingTeam != null) {
+    _showSnackBar('Team "$capitalizedName" already exists!', Colors.orange);
+    return;
+  }
+
+  // Create team in ObjectBox
+  try {
+    final team = Team.create(capitalizedName);
+    setState(() {
+      teams.add(team);
+    });
+    _showSnackBar('Team "$capitalizedName" created successfully!', Colors.green);
+  } catch (e) {
+    _showSnackBar('Error creating team: $e', Colors.red);
+  }
+}
+ Future<String?> _showTeamNameDialog() async {
+  final controller = TextEditingController();
+  
+  return showDialog<String>(
+    context: context,
+    barrierDismissible: false,
+    builder: (BuildContext dialogContext) {
+      return Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1C2026),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.3),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
           ),
-        );
-      },
-    );
-  }
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Create Team',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                maxLength: 30,
+                textCapitalization: TextCapitalization.sentences,
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontFamily: 'Poppins',
+                ),
+                decoration: InputDecoration(
+                  hintText: 'Enter Team Name',
+                  hintStyle: const TextStyle(
+                    color: Color(0xFF9E9E9E),
+                    fontFamily: 'Poppins',
+                  ),
+                  filled: true,
+                  fillColor: const Color(0xFFD9D9D9),
+                  counterText: '',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFFD1D1D1)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFFD1D1D1)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(
+                      color: Color(0xFF00C4FF),
+                      width: 2,
+                    ),
+                  ),
+                  contentPadding: const EdgeInsets.all(16),
+                ),
+                onSubmitted: (_) {
+                  Navigator.of(dialogContext).pop(controller.text);
+                },
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.of(dialogContext).pop(null),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(dialogContext).pop(controller.text);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF00C4FF),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: const Text(
+                        'Create',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontFamily: 'Poppins',
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ), 
+        ),
+      );
+    },
+  );
+}
 
   void _deleteTeam(Team team) {
     showDialog(

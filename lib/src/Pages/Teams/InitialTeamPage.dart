@@ -295,97 +295,72 @@ void didChangeDependencies() {
     );
   }
 
-  Widget _buildDrawer() {
-    return Drawer(
-      backgroundColor: const Color(0xFF1C2026),
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          const DrawerHeader(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0xFF283593), Color(0xFF1A237E)],
+Widget _buildDrawer() {
+  return Drawer(
+    backgroundColor: const Color(0xFF1C2026),
+    child: ListView(
+      padding: EdgeInsets.zero,
+      children: [
+        const DrawerHeader(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFF283593), Color(0xFF1A237E)],
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Cricket Scorer',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Cricket Scorer',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
+              SizedBox(height: 8),
+              Text(
+                'Menu',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
                 ),
-                SizedBox(height: 8),
-                Text(
-                  'Menu',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ListTile(
-  leading: const Icon(Icons.group, color: Colors.white),
-  title: const Text('Teams', style: TextStyle(color: Colors.white)),
-  onTap: () async {
-    Navigator.pop(context);
-    await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const NewTeamsPage()),
-    );
-    // Reload teams immediately when returning
-    _loadTeams();
-  },
-),
-        ListTile(
-  leading: const Icon(Icons.settings, color: Colors.white),
-  title: const Text('Match Settings', style: TextStyle(color: Colors.white)),
-  onTap: () async {
-    Navigator.pop(context);
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => MatchSettingsPage(
-          currentAllowNoball: allowNoball,
-          currentAllowWide: allowWide,
         ),
-      ),
-    );
-    
-    if (result != null && result is Map<String, dynamic>) {
-      setState(() {
-        allowNoball = result['allowNoball'] ?? true;
-        allowWide = result['allowWide'] ?? true;
-        additionalSettings = true;
-      });
-    }
-  },
-),
-          ListTile(
-            leading: const Icon(Icons.scoreboard, color: Colors.white),
-            title: const Text('Scorecard', style: TextStyle(color: Colors.white)),
-            onTap: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Scorecard feature coming soon!'),
-                  backgroundColor: Color(0xFF00C4FF),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
+        ListTile(
+          leading: const Icon(Icons.group, color: Colors.white),
+          title: const Text('Teams', style: TextStyle(color: Colors.white)),
+          onTap: () async {
+            Navigator.pop(context);
+            await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const NewTeamsPage()),
+            );
+            _loadTeams();
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.scoreboard, color: Colors.white),
+          title: const Text('Scorecard', style: TextStyle(color: Colors.white)),
+          onTap: () {
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Scorecard feature coming soon!'),
+                backgroundColor: Color(0xFF00C4FF),
+              ),
+            );
+          },
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildBottomNavBar() {
     return Container(
@@ -936,93 +911,95 @@ void _showTeamSelectionDialog(String label, String? currentTeamId, Function(Stri
     );
   }
 
-  Widget _buildBottomRow(double w) {
-  return Row(
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+ Widget _buildBottomRow(double w) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      GestureDetector(
-        onTap: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => MatchSettingsPage(
-                currentAllowNoball: allowNoball,
-                currentAllowWide: allowWide,
-              ),
-            ),
-          );
-          
-          if (result != null && result is Map<String, dynamic>) {
-            setState(() {
-              allowNoball = result['allowNoball'] ?? true;
-              allowWide = result['allowWide'] ?? true;
-              additionalSettings = true;
-            });
-          }
-        },
-        child: Row(
-          children: [
-            Text('Additional\nSettings', style: _textStyle(w * 0.04)),
-            SizedBox(width: w * 0.025),
-            Switch(
-              value: additionalSettings,
-              onChanged: (value) async {
-                if (value) {
-                  final result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => MatchSettingsPage(
-                        currentAllowNoball: allowNoball,
-                        currentAllowWide: allowWide,
-                      ),
-                    ),
-                  );
-                  
-                  if (result != null && result is Map<String, dynamic>) {
-                    setState(() {
-                      allowNoball = result['allowNoball'] ?? true;
-                      allowWide = result['allowWide'] ?? true;
-                      additionalSettings = true;
-                    });
-                  }
-                } else {
-                  setState(() => additionalSettings = false);
-                }
-              },
-              activeColor: const Color(0xFF00C4FF),
-            ),
-          ],
-        ),
-      ),
-      GestureDetector(
-        onTap: _startMatch,
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: w * 0.05, vertical: w * 0.03),
-          decoration: BoxDecoration(
-            color: const Color(0xFF00C4FF),
-            borderRadius: BorderRadius.circular(22),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x66000000),
-                blurRadius: 10,
-                offset: Offset(0, 4),
-              )
-            ],
+      // No-ball Toggle
+      Row(
+        children: [
+          Icon(
+            Icons.sports_cricket,
+            color: Colors.white70,
+            size: w * 0.05,
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Start Match', style: _textStyle(w * 0.04)),
-              SizedBox(width: w * 0.02),
-              _buildSvgIcon('assets/mdi_cricket.svg', w * 0.062),
-            ],
+          SizedBox(width: w * 0.03),
+          SizedBox(
+            width: w * 0.2,
+            child: Text('No-ball', style: _textStyle(w * 0.034)),
+          ),
+          Switch(
+            value: allowNoball,
+            onChanged: (value) {
+              setState(() => allowNoball = value);
+            },
+            activeColor: const Color(0xFF00C4FF),
+            inactiveThumbColor: Colors.grey,
+            inactiveTrackColor: Colors.grey.withOpacity(0.3),
+          ),
+        ],
+      ),
+      
+      SizedBox(height: w * 0.02),
+      
+      // Wide Toggle
+      Row(
+        children: [
+          Icon(
+            Icons.sports_baseball,
+            color: Colors.white70,
+            size: w * 0.05,
+          ),
+          SizedBox(width: w * 0.03),
+          SizedBox(
+            width: w * 0.2,
+            child: Text('Wide', style: _textStyle(w * 0.034)),
+          ),
+          Switch(
+            value: allowWide,
+            onChanged: (value) {
+              setState(() => allowWide = value);
+            },
+            activeColor: const Color(0xFF00C4FF),
+            inactiveThumbColor: Colors.grey,
+            inactiveTrackColor: Colors.grey.withOpacity(0.3),
+          ),
+        ],
+      ),
+      
+      SizedBox(height: w * 0.04),
+      
+      // Start Match Button (Centered)
+      Center(
+        child: GestureDetector(
+          onTap: _startMatch,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: w * 0.08, vertical: w * 0.035),
+            decoration: BoxDecoration(
+              color: const Color(0xFF00C4FF),
+              borderRadius: BorderRadius.circular(22),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x66000000),
+                  blurRadius: 10,
+                  offset: Offset(0, 4),
+                )
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Start Match', style: _textStyle(w * 0.042, FontWeight.w600)),
+                SizedBox(width: w * 0.025),
+                _buildSvgIcon('assets/mdi_cricket.svg', w * 0.062),
+              ],
+            ),
           ),
         ),
       ),
     ],
   );
 }
-
   Widget _buildLabeledTextField(String label, String placeholder, double w) {
     return Row(
       children: [

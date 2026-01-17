@@ -17,6 +17,8 @@ class Bowler {
   int runsConceded;
   int wickets;
   int balls;
+  int maidens; // ADDED: Maiden overs count
+  int extras; // ADDED: Extras conceded by this bowler
   double overs;
   double economy;
   
@@ -29,6 +31,8 @@ class Bowler {
     this.runsConceded = 0,
     this.wickets = 0,
     this.balls = 0,
+    this.maidens = 0,
+    this.extras = 0,
     this.overs = 0.0,
     this.economy = 0.0,
   });
@@ -152,15 +156,24 @@ class Bowler {
     ObjectBoxHelper.bowlerBox.remove(id);
   }
   
-  /// Update stats after a ball
-  void updateStats(int runsScored, bool isWicket) {
+  /// Update stats after a ball - UPDATED with extras support
+  void updateStats(
+    int runsScored,
+    bool isWicket, {
+    int extrasRuns = 0,
+    bool countBall = true,
+  }) {
     runsConceded += runsScored;
     if (isWicket) {
       wickets++;
     }
-    balls++;
-    _calculateOvers();
-    _calculateEconomy();
+    
+    if (countBall) {
+      balls++;
+      _calculateOvers();
+      _calculateEconomy();
+    }
+    
     save();
   }
   
@@ -195,11 +208,19 @@ class Bowler {
     economy = totalOvers > 0 ? (runsConceded / totalOvers) : 0.0;
   }
   
+  /// Increment maiden over count
+  void incrementMaiden() {
+    maidens++;
+    save();
+  }
+  
   /// Reset stats
   void resetStats() {
     runsConceded = 0;
     wickets = 0;
     balls = 0;
+    maidens = 0;
+    extras = 0;
     overs = 0.0;
     economy = 0.0;
     save();

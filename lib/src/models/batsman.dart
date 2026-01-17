@@ -19,10 +19,13 @@ class Batsman {
   int fours;
   int sixes;
   int dotBalls;
+  int extras; // ADDED: Extras scored off this batsman
   double strikeRate;
   
   bool isOut;
   String? bowlerIdWhoGotWicket;
+  String? dismissalType; // ADDED: 'bowled', 'caught', 'runout', 'lbw', etc.
+  String? fielderIdWhoRanOut; // ADDED: Player ID of fielder who ran out
   
   Batsman({
     this.id = 0,
@@ -35,9 +38,12 @@ class Batsman {
     this.fours = 0,
     this.sixes = 0,
     this.dotBalls = 0,
+    this.extras = 0,
     this.strikeRate = 0.0,
     this.isOut = false,
     this.bowlerIdWhoGotWicket,
+    this.dismissalType,
+    this.fielderIdWhoRanOut,
   });
 
   // Static methods for database operations
@@ -159,12 +165,19 @@ class Batsman {
     ObjectBoxHelper.batsmanBox.remove(id);
   }
   
-  /// Update stats after a ball
-  void updateStats(int runsScored) {
+  /// Update stats after a ball - UPDATED with extras support
+  void updateStats(
+    int runsScored, {
+    int extrasRuns = 0,
+    bool countBall = true,
+  }) {
     runs += runsScored;
-    ballsFaced++;
     
-    if (runsScored == 0) dotBalls++;
+    if (countBall) {
+      ballsFaced++;
+      if (runsScored == 0) dotBalls++;
+    }
+    
     if (runsScored == 4) fours++;
     if (runsScored == 6) sixes++;
     
@@ -185,10 +198,16 @@ class Batsman {
     save();
   }
   
-  /// Mark batsman as out
-  void markAsOut({required String bowlerIdWhoGotWicket}) {
+  /// Mark batsman as out - UPDATED
+  void markAsOut({
+    String? bowlerIdWhoGotWicket,
+    String? dismissalType,
+    String? fielderIdWhoRanOut,
+  }) {
     isOut = true;
     this.bowlerIdWhoGotWicket = bowlerIdWhoGotWicket;
+    this.dismissalType = dismissalType;
+    this.fielderIdWhoRanOut = fielderIdWhoRanOut;
     save();
   }
   
@@ -196,6 +215,8 @@ class Batsman {
   void markAsNotOut() {
     isOut = false;
     bowlerIdWhoGotWicket = null;
+    dismissalType = null;
+    fielderIdWhoRanOut = null;
     save();
   }
   
@@ -206,9 +227,12 @@ class Batsman {
     fours = 0;
     sixes = 0;
     dotBalls = 0;
+    extras = 0;
     strikeRate = 0.0;
     isOut = false;
     bowlerIdWhoGotWicket = null;
+    dismissalType = null;
+    fielderIdWhoRanOut = null;
     save();
   }
   

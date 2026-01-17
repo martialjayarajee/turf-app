@@ -7,6 +7,7 @@ import 'innings.dart';
 import 'score.dart';
 import 'batsman.dart';
 import 'bowler.dart';
+import 'match_history.dart';
 import './objectbox.g.dart';
 
 class ObjectBoxHelper {
@@ -18,6 +19,7 @@ class ObjectBoxHelper {
   static Box<Score>? _scoreBox;
   static Box<Batsman>? _batsmanBox;
   static Box<Bowler>? _bowlerBox;
+  static Box<MatchHistory>? _matchHistoryBox;
 
   /// Check if ObjectBox is initialized
   static bool get isInitialized => _store != null;
@@ -45,6 +47,7 @@ class ObjectBoxHelper {
       _scoreBox = _store!.box<Score>();
       _batsmanBox = _store!.box<Batsman>();
       _bowlerBox = _store!.box<Bowler>();
+      _matchHistoryBox = _store!.box<MatchHistory>();
       
       print('✅ ObjectBox initialized successfully');
       print('📊 Database Stats:');
@@ -130,6 +133,16 @@ class ObjectBoxHelper {
       );
     }
     return _bowlerBox!;
+  }
+
+  /// Get MatchHistory box (throws if not initialized)
+  static Box<MatchHistory> get matchHistoryBox {
+    if (_matchHistoryBox == null) {
+      throw Exception(
+        'ObjectBox not initialized. Call ObjectBoxHelper.init() first in main.dart'
+      );
+    }
+    return _matchHistoryBox!;
   }
 
   /// Get Store instance

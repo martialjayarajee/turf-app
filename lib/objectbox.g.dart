@@ -14,14 +14,14 @@ import 'package:objectbox/internal.dart'
 import 'package:objectbox/objectbox.dart' as obx;
 import 'package:objectbox_flutter_libs/objectbox_flutter_libs.dart';
 
-import 'batsman.dart';
-import 'bowler.dart';
-import 'innings.dart';
-import 'match.dart';
-import 'match_history.dart';
-import 'score.dart';
-import 'team.dart';
-import 'team_member.dart';
+import 'src/models/batsman.dart';
+import 'src/models/bowler.dart';
+import 'src/models/innings.dart';
+import 'src/models/match.dart';
+import 'src/models/match_history.dart';
+import 'src/models/score.dart';
+import 'src/models/team.dart';
+import 'src/models/team_member.dart';
 
 export 'package:objectbox/objectbox.dart'; // so that callers only have to import this file
 
